@@ -1,1 +1,1232 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local LocalPlayer = Players.LocalPlayer
 
+local Theme = {
+    Background = Color3.fromRGB(11, 11, 15),
+    Sidebar = Color3.fromRGB(16, 16, 21),
+    Topbar = Color3.fromRGB(14, 14, 18),
+    Card = Color3.fromRGB(19, 19, 24),
+    Accent = Color3.fromRGB(88, 101, 242),
+    Idle = Color3.fromRGB(130, 130, 140),
+    Hover = Color3.fromRGB(195, 195, 205),
+    Tooltip = Color3.fromRGB(22, 22, 28),
+    TooltipText = Color3.fromRGB(225, 225, 232),
+    Divider = Color3.fromRGB(30, 30, 36),
+    TextPrimary = Color3.fromRGB(240, 240, 245),
+    TextSecondary = Color3.fromRGB(140, 140, 150),
+    Good = Color3.fromRGB(90, 220, 130),
+    Bad = Color3.fromRGB(220, 90, 90)
+}
+
+local DiscordInvite = "https://discord.gg/kYXrvQtX69"
+local RequiredKey = ""
+
+local Ease = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local FastEase = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local ActiveConnections = {}
+local function Track(conn)
+    table.insert(ActiveConnections, conn)
+    return conn
+end
+
+local AvatarContent = ""
+do
+    local ok, content = pcall(function()
+        return Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+    end)
+    if ok then
+        AvatarContent = content
+    end
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HubUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = (gethui and gethui() or game:GetService("CoreGui"))
+
+local TransitionCover = Instance.new("Frame")
+TransitionCover.Size = UDim2.fromScale(1, 1)
+TransitionCover.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TransitionCover.BackgroundTransparency = 1
+TransitionCover.BorderSizePixel = 0
+TransitionCover.ZIndex = 30
+TransitionCover.Parent = ScreenGui
+
+local function CloseHub()
+    for _, conn in ipairs(ActiveConnections) do
+        conn:Disconnect()
+    end
+    ScreenGui:Destroy()
+end
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(560, 380)
+Main.Position = UDim2.fromScale(0.5, 0.5)
+Main.AnchorPoint = Vector2.new(0.5, 0.5)
+Main.BackgroundColor3 = Theme.Background
+Main.BorderSizePixel = 0
+Main.ClipsDescendants = true
+Main.Visible = false
+Main.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.Parent = Main
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 1
+MainStroke.Color = Theme.Divider
+MainStroke.Transparency = 0.4
+MainStroke.Parent = Main
+
+local Topbar = Instance.new("Frame")
+Topbar.Size = UDim2.new(1, 0, 0, 40)
+Topbar.BackgroundColor3 = Theme.Topbar
+Topbar.BorderSizePixel = 0
+Topbar.Active = true
+Topbar.Parent = Main
+
+local TopbarDivider = Instance.new("Frame")
+TopbarDivider.Size = UDim2.new(1, 0, 0, 1)
+TopbarDivider.Position = UDim2.new(0, 0, 1, -1)
+TopbarDivider.BackgroundColor3 = Theme.Divider
+TopbarDivider.BorderSizePixel = 0
+TopbarDivider.Parent = Topbar
+
+local Title = Instance.new("TextLabel")
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.fromOffset(16, 0)
+Title.Size = UDim2.new(1, -100, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextColor3 = Theme.TextPrimary
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Text = "Home"
+Title.Parent = Topbar
+
+local WindowButtons = Instance.new("Frame")
+WindowButtons.BackgroundTransparency = 1
+WindowButtons.Size = UDim2.fromOffset(70, 40)
+WindowButtons.Position = UDim2.new(1, -70, 0, 0)
+WindowButtons.Parent = Topbar
+
+local WindowButtonsList = Instance.new("UIListLayout")
+WindowButtonsList.FillDirection = Enum.FillDirection.Horizontal
+WindowButtonsList.HorizontalAlignment = Enum.HorizontalAlignment.Right
+WindowButtonsList.VerticalAlignment = Enum.VerticalAlignment.Center
+WindowButtonsList.Padding = UDim.new(0, 6)
+WindowButtonsList.Parent = WindowButtons
+
+local WindowButtonsPad = Instance.new("UIPadding")
+WindowButtonsPad.PaddingRight = UDim.new(0, 10)
+WindowButtonsPad.Parent = WindowButtons
+
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.fromOffset(26, 26)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.BackgroundTransparency = 1
+MinimizeButton.AutoButtonColor = false
+MinimizeButton.Text = ""
+MinimizeButton.LayoutOrder = 1
+MinimizeButton.Parent = WindowButtons
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(1, 0)
+MinimizeCorner.Parent = MinimizeButton
+
+local MinimizeGlyph = Instance.new("TextLabel")
+MinimizeGlyph.BackgroundTransparency = 1
+MinimizeGlyph.Size = UDim2.fromScale(1, 1)
+MinimizeGlyph.Font = Enum.Font.GothamBold
+MinimizeGlyph.TextSize = 16
+MinimizeGlyph.TextColor3 = Theme.Idle
+MinimizeGlyph.Text = "-"
+MinimizeGlyph.Parent = MinimizeButton
+
+MinimizeButton.MouseEnter:Connect(function()
+    TweenService:Create(MinimizeButton, FastEase, {BackgroundTransparency = 0.9}):Play()
+    TweenService:Create(MinimizeGlyph, FastEase, {TextColor3 = Theme.Hover}):Play()
+end)
+
+MinimizeButton.MouseLeave:Connect(function()
+    TweenService:Create(MinimizeButton, FastEase, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(MinimizeGlyph, FastEase, {TextColor3 = Theme.Idle}):Play()
+end)
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.fromOffset(26, 26)
+CloseButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.BackgroundTransparency = 1
+CloseButton.AutoButtonColor = false
+CloseButton.Text = ""
+CloseButton.LayoutOrder = 2
+CloseButton.Parent = WindowButtons
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(1, 0)
+CloseCorner.Parent = CloseButton
+
+local CloseBar1 = Instance.new("Frame")
+CloseBar1.Size = UDim2.fromOffset(12, 2)
+CloseBar1.Position = UDim2.fromScale(0.5, 0.5)
+CloseBar1.AnchorPoint = Vector2.new(0.5, 0.5)
+CloseBar1.BackgroundColor3 = Theme.Idle
+CloseBar1.Rotation = 45
+CloseBar1.BorderSizePixel = 0
+CloseBar1.Parent = CloseButton
+
+local CloseBar1Corner = Instance.new("UICorner")
+CloseBar1Corner.CornerRadius = UDim.new(1, 0)
+CloseBar1Corner.Parent = CloseBar1
+
+local CloseBar2 = CloseBar1:Clone()
+CloseBar2.Rotation = -45
+CloseBar2.Parent = CloseButton
+
+CloseButton.MouseEnter:Connect(function()
+    TweenService:Create(CloseButton, FastEase, {BackgroundTransparency = 0.9}):Play()
+    TweenService:Create(CloseBar1, FastEase, {BackgroundColor3 = Theme.Bad}):Play()
+    TweenService:Create(CloseBar2, FastEase, {BackgroundColor3 = Theme.Bad}):Play()
+end)
+
+CloseButton.MouseLeave:Connect(function()
+    TweenService:Create(CloseButton, FastEase, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(CloseBar1, FastEase, {BackgroundColor3 = Theme.Idle}):Play()
+    TweenService:Create(CloseBar2, FastEase, {BackgroundColor3 = Theme.Idle}):Play()
+end)
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 68, 1, -40)
+Sidebar.Position = UDim2.new(0, 0, 0, 40)
+Sidebar.BackgroundColor3 = Theme.Sidebar
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = Main
+
+local SidebarList = Instance.new("UIListLayout")
+SidebarList.FillDirection = Enum.FillDirection.Vertical
+SidebarList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SidebarList.Padding = UDim.new(0, 16)
+SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarList.Parent = Sidebar
+
+local SidebarPad = Instance.new("UIPadding")
+SidebarPad.PaddingTop = UDim.new(0, 22)
+SidebarPad.PaddingBottom = UDim.new(0, 16)
+SidebarPad.Parent = Sidebar
+
+local Canvas = Instance.new("Frame")
+Canvas.Size = UDim2.new(1, -68, 1, -40)
+Canvas.Position = UDim2.new(0, 68, 0, 40)
+Canvas.BackgroundTransparency = 1
+Canvas.Parent = Main
+
+local CanvasTitle = Instance.new("TextLabel")
+CanvasTitle.BackgroundTransparency = 1
+CanvasTitle.Position = UDim2.fromOffset(20, 18)
+CanvasTitle.Size = UDim2.new(1, -40, 0, 24)
+CanvasTitle.Font = Enum.Font.GothamBold
+CanvasTitle.TextSize = 16
+CanvasTitle.TextColor3 = Theme.TextPrimary
+CanvasTitle.TextXAlignment = Enum.TextXAlignment.Left
+CanvasTitle.Text = ""
+CanvasTitle.Visible = false
+CanvasTitle.Parent = Canvas
+
+local HomeContent = Instance.new("Frame")
+HomeContent.BackgroundTransparency = 1
+HomeContent.Position = UDim2.fromOffset(20, 18)
+HomeContent.Size = UDim2.new(1, -40, 1, -36)
+HomeContent.Parent = Canvas
+
+local HomeList = Instance.new("UIListLayout")
+HomeList.FillDirection = Enum.FillDirection.Vertical
+HomeList.Padding = UDim.new(0, 12)
+HomeList.SortOrder = Enum.SortOrder.LayoutOrder
+HomeList.Parent = HomeContent
+
+local ProfileCard = Instance.new("Frame")
+ProfileCard.Size = UDim2.new(1, 0, 0, 76)
+ProfileCard.BackgroundColor3 = Theme.Card
+ProfileCard.BorderSizePixel = 0
+ProfileCard.LayoutOrder = 1
+ProfileCard.Parent = HomeContent
+
+local ProfileCorner = Instance.new("UICorner")
+ProfileCorner.CornerRadius = UDim.new(0, 10)
+ProfileCorner.Parent = ProfileCard
+
+local ProfileStroke = Instance.new("UIStroke")
+ProfileStroke.Thickness = 1
+ProfileStroke.Color = Theme.Divider
+ProfileStroke.Parent = ProfileCard
+
+local ProfileAvatar = Instance.new("ImageLabel")
+ProfileAvatar.Size = UDim2.fromOffset(48, 48)
+ProfileAvatar.Position = UDim2.fromOffset(14, 14)
+ProfileAvatar.BackgroundColor3 = Theme.Sidebar
+ProfileAvatar.Image = AvatarContent
+ProfileAvatar.Parent = ProfileCard
+
+local ProfileAvatarCorner = Instance.new("UICorner")
+ProfileAvatarCorner.CornerRadius = UDim.new(1, 0)
+ProfileAvatarCorner.Parent = ProfileAvatar
+
+local ProfileWelcome = Instance.new("TextLabel")
+ProfileWelcome.BackgroundTransparency = 1
+ProfileWelcome.Position = UDim2.fromOffset(74, 15)
+ProfileWelcome.Size = UDim2.new(1, -88, 0, 20)
+ProfileWelcome.Font = Enum.Font.GothamBold
+ProfileWelcome.TextSize = 15
+ProfileWelcome.TextColor3 = Theme.TextPrimary
+ProfileWelcome.TextXAlignment = Enum.TextXAlignment.Left
+ProfileWelcome.Text = "Welcome, " .. LocalPlayer.DisplayName
+ProfileWelcome.Parent = ProfileCard
+
+local ProfileGame = Instance.new("TextLabel")
+ProfileGame.BackgroundTransparency = 1
+ProfileGame.Position = UDim2.fromOffset(74, 38)
+ProfileGame.Size = UDim2.new(1, -88, 0, 18)
+ProfileGame.Font = Enum.Font.Gotham
+ProfileGame.TextSize = 12
+ProfileGame.TextColor3 = Theme.TextSecondary
+ProfileGame.TextXAlignment = Enum.TextXAlignment.Left
+ProfileGame.Text = "Loading game info..."
+ProfileGame.Parent = ProfileCard
+
+local ExecutorCard = Instance.new("Frame")
+ExecutorCard.Size = UDim2.new(1, 0, 0, 64)
+ExecutorCard.BackgroundColor3 = Theme.Card
+ExecutorCard.BorderSizePixel = 0
+ExecutorCard.LayoutOrder = 2
+ExecutorCard.Parent = HomeContent
+
+local ExecutorCorner = Instance.new("UICorner")
+ExecutorCorner.CornerRadius = UDim.new(0, 10)
+ExecutorCorner.Parent = ExecutorCard
+
+local ExecutorStroke = Instance.new("UIStroke")
+ExecutorStroke.Thickness = 1
+ExecutorStroke.Color = Theme.Divider
+ExecutorStroke.Parent = ExecutorCard
+
+local ExecutorDot = Instance.new("Frame")
+ExecutorDot.Size = UDim2.fromOffset(8, 8)
+ExecutorDot.Position = UDim2.fromOffset(16, 17)
+ExecutorDot.BackgroundColor3 = Theme.Good
+ExecutorDot.BorderSizePixel = 0
+ExecutorDot.Parent = ExecutorCard
+
+local ExecutorDotCorner = Instance.new("UICorner")
+ExecutorDotCorner.CornerRadius = UDim.new(1, 0)
+ExecutorDotCorner.Parent = ExecutorDot
+
+local ExecutorTitle = Instance.new("TextLabel")
+ExecutorTitle.BackgroundTransparency = 1
+ExecutorTitle.Position = UDim2.fromOffset(34, 10)
+ExecutorTitle.Size = UDim2.new(1, -48, 0, 18)
+ExecutorTitle.Font = Enum.Font.GothamBold
+ExecutorTitle.TextSize = 13
+ExecutorTitle.TextColor3 = Theme.TextPrimary
+ExecutorTitle.TextXAlignment = Enum.TextXAlignment.Left
+ExecutorTitle.Text = "Executor"
+ExecutorTitle.Parent = ExecutorCard
+
+local ExecutorBody = Instance.new("TextLabel")
+ExecutorBody.BackgroundTransparency = 1
+ExecutorBody.Position = UDim2.fromOffset(34, 32)
+ExecutorBody.Size = UDim2.new(1, -48, 0, 18)
+ExecutorBody.Font = Enum.Font.Gotham
+ExecutorBody.TextSize = 12
+ExecutorBody.TextColor3 = Theme.TextSecondary
+ExecutorBody.TextXAlignment = Enum.TextXAlignment.Left
+ExecutorBody.Text = "Detecting..."
+ExecutorBody.Parent = ExecutorCard
+
+local DiscordCard = Instance.new("TextButton")
+DiscordCard.Size = UDim2.new(1, 0, 0, 56)
+DiscordCard.BackgroundColor3 = Theme.Accent
+DiscordCard.BackgroundTransparency = 0.82
+DiscordCard.BorderSizePixel = 0
+DiscordCard.AutoButtonColor = false
+DiscordCard.Text = ""
+DiscordCard.LayoutOrder = 3
+DiscordCard.Parent = HomeContent
+
+local DiscordCorner = Instance.new("UICorner")
+DiscordCorner.CornerRadius = UDim.new(0, 10)
+DiscordCorner.Parent = DiscordCard
+
+local DiscordStroke = Instance.new("UIStroke")
+DiscordStroke.Thickness = 1
+DiscordStroke.Color = Theme.Accent
+DiscordStroke.Transparency = 0.5
+DiscordStroke.Parent = DiscordCard
+
+local DiscordTitle = Instance.new("TextLabel")
+DiscordTitle.BackgroundTransparency = 1
+DiscordTitle.Position = UDim2.fromOffset(16, 8)
+DiscordTitle.Size = UDim2.new(1, -32, 0, 18)
+DiscordTitle.Font = Enum.Font.GothamBold
+DiscordTitle.TextSize = 13
+DiscordTitle.TextColor3 = Theme.TextPrimary
+DiscordTitle.TextXAlignment = Enum.TextXAlignment.Left
+DiscordTitle.Text = "Discord"
+DiscordTitle.Parent = DiscordCard
+
+local DiscordBody = Instance.new("TextLabel")
+DiscordBody.BackgroundTransparency = 1
+DiscordBody.Position = UDim2.fromOffset(16, 29)
+DiscordBody.Size = UDim2.new(1, -32, 0, 18)
+DiscordBody.Font = Enum.Font.Gotham
+DiscordBody.TextSize = 12
+DiscordBody.TextColor3 = Theme.TextSecondary
+DiscordBody.TextXAlignment = Enum.TextXAlignment.Left
+DiscordBody.Text = "Tap to copy invite link"
+DiscordBody.Parent = DiscordCard
+
+DiscordCard.MouseEnter:Connect(function()
+    TweenService:Create(DiscordCard, FastEase, {BackgroundTransparency = 0.7}):Play()
+end)
+
+DiscordCard.MouseLeave:Connect(function()
+    TweenService:Create(DiscordCard, FastEase, {BackgroundTransparency = 0.82}):Play()
+end)
+
+DiscordCard.MouseButton1Click:Connect(function()
+    local original = DiscordBody.Text
+    if DiscordInvite == "" then
+        DiscordBody.Text = "No invite link set yet"
+    elseif setclipboard then
+        pcall(setclipboard, DiscordInvite)
+        DiscordBody.Text = "Copied to clipboard"
+    else
+        DiscordBody.Text = "Clipboard not supported"
+    end
+    task.delay(1.2, function()
+        DiscordBody.Text = original
+    end)
+end)
+
+task.spawn(function()
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+    if success and info and info.Name then
+        ProfileGame.Text = "Playing " .. info.Name
+    else
+        ProfileGame.Text = "Playing Unknown Game"
+    end
+end)
+
+task.spawn(function()
+    local execName, execVersion = nil, nil
+    if identifyexecutor then
+        local success, name, version = pcall(identifyexecutor)
+        if success and name then
+            execName = name
+            execVersion = version
+        end
+    end
+    if execName then
+        ExecutorBody.Text = execVersion and (execName .. " " .. tostring(execVersion)) or execName
+    else
+        ExecutorDot.BackgroundColor3 = Theme.Bad
+        ExecutorBody.Text = "Could not detect executor"
+    end
+end)
+
+local function CreateFeatureToggle(parent, order, title, subtitle)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1, 0, 0, 56)
+    Row.BackgroundColor3 = Theme.Card
+    Row.BorderSizePixel = 0
+    Row.LayoutOrder = order
+    Row.Parent = parent
+
+    local RowCorner = Instance.new("UICorner")
+    RowCorner.CornerRadius = UDim.new(0, 10)
+    RowCorner.Parent = Row
+
+    local RowStroke = Instance.new("UIStroke")
+    RowStroke.Thickness = 1
+    RowStroke.Color = Theme.Divider
+    RowStroke.Parent = Row
+
+    local RowTitle = Instance.new("TextLabel")
+    RowTitle.BackgroundTransparency = 1
+    RowTitle.Position = UDim2.fromOffset(16, 8)
+    RowTitle.Size = UDim2.new(1, -80, 0, 18)
+    RowTitle.Font = Enum.Font.GothamBold
+    RowTitle.TextSize = 13
+    RowTitle.TextColor3 = Theme.TextPrimary
+    RowTitle.TextXAlignment = Enum.TextXAlignment.Left
+    RowTitle.Text = title
+    RowTitle.Parent = Row
+
+    local RowSubtitle = Instance.new("TextLabel")
+    RowSubtitle.BackgroundTransparency = 1
+    RowSubtitle.Position = UDim2.fromOffset(16, 29)
+    RowSubtitle.Size = UDim2.new(1, -80, 0, 18)
+    RowSubtitle.Font = Enum.Font.Gotham
+    RowSubtitle.TextSize = 12
+    RowSubtitle.TextColor3 = Theme.TextSecondary
+    RowSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+    RowSubtitle.Text = subtitle
+    RowSubtitle.Parent = Row
+
+    local Toggle = Instance.new("TextButton")
+    Toggle.Size = UDim2.fromOffset(40, 22)
+    Toggle.Position = UDim2.new(1, -56, 0.5, 0)
+    Toggle.AnchorPoint = Vector2.new(0, 0.5)
+    Toggle.BackgroundColor3 = Theme.Idle
+    Toggle.BackgroundTransparency = 0.7
+    Toggle.BorderSizePixel = 0
+    Toggle.AutoButtonColor = false
+    Toggle.Text = ""
+    Toggle.Parent = Row
+
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(1, 0)
+    ToggleCorner.Parent = Toggle
+
+    local ToggleStroke = Instance.new("UIStroke")
+    ToggleStroke.Thickness = 1
+    ToggleStroke.Color = Theme.Divider
+    ToggleStroke.Parent = Toggle
+
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.fromOffset(16, 16)
+    Knob.Position = UDim2.fromOffset(3, 3)
+    Knob.BackgroundColor3 = Theme.Hover
+    Knob.BorderSizePixel = 0
+    Knob.Parent = Toggle
+
+    local KnobCorner = Instance.new("UICorner")
+    KnobCorner.CornerRadius = UDim.new(1, 0)
+    KnobCorner.Parent = Knob
+
+    local State = false
+
+    Toggle.MouseButton1Click:Connect(function()
+        State = not State
+        if State then
+            TweenService:Create(Toggle, FastEase, {BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.15}):Play()
+            TweenService:Create(Knob, FastEase, {Position = UDim2.fromOffset(21, 3), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        else
+            TweenService:Create(Toggle, FastEase, {BackgroundColor3 = Theme.Idle, BackgroundTransparency = 0.7}):Play()
+            TweenService:Create(Knob, FastEase, {Position = UDim2.fromOffset(3, 3), BackgroundColor3 = Theme.Hover}):Play()
+        end
+    end)
+
+    return Row
+end
+
+local MainContent = Instance.new("Frame")
+MainContent.BackgroundTransparency = 1
+MainContent.Position = UDim2.fromOffset(20, 54)
+MainContent.Size = UDim2.new(1, -40, 1, -74)
+MainContent.Visible = false
+MainContent.Parent = Canvas
+
+local MainList = Instance.new("UIListLayout")
+MainList.FillDirection = Enum.FillDirection.Vertical
+MainList.Padding = UDim.new(0, 12)
+MainList.SortOrder = Enum.SortOrder.LayoutOrder
+MainList.Parent = MainContent
+
+CreateFeatureToggle(MainContent, 1, "Auto Farm", "Automatically farms nearby resources")
+CreateFeatureToggle(MainContent, 2, "Auto Collect", "Picks up drops without moving")
+
+local MiscContent = Instance.new("Frame")
+MiscContent.BackgroundTransparency = 1
+MiscContent.Position = UDim2.fromOffset(20, 54)
+MiscContent.Size = UDim2.new(1, -40, 1, -74)
+MiscContent.Visible = false
+MiscContent.Parent = Canvas
+
+local MiscList = Instance.new("UIListLayout")
+MiscList.FillDirection = Enum.FillDirection.Vertical
+MiscList.Padding = UDim.new(0, 12)
+MiscList.SortOrder = Enum.SortOrder.LayoutOrder
+MiscList.Parent = MiscContent
+
+CreateFeatureToggle(MiscContent, 1, "Anti AFK", "Prevents being kicked for inactivity")
+CreateFeatureToggle(MiscContent, 2, "Fullbright", "Removes darkness and shadows")
+
+local MenuContent = Instance.new("Frame")
+MenuContent.BackgroundTransparency = 1
+MenuContent.Position = UDim2.fromOffset(20, 54)
+MenuContent.Size = UDim2.new(1, -40, 1, -74)
+MenuContent.Visible = false
+MenuContent.Parent = Canvas
+
+local MenuList = Instance.new("UIListLayout")
+MenuList.FillDirection = Enum.FillDirection.Vertical
+MenuList.Padding = UDim.new(0, 12)
+MenuList.SortOrder = Enum.SortOrder.LayoutOrder
+MenuList.Parent = MenuContent
+
+CreateFeatureToggle(MenuContent, 1, "Auto Save Config", "Saves your settings automatically")
+CreateFeatureToggle(MenuContent, 2, "Notifications", "Shows alerts for hub updates")
+
+local ActiveTab = nil
+local HomeTab, MainTab, MiscTab, MenuTab
+local ContentFrames = {}
+
+local function SetTooltip(data, visible)
+    if visible then
+        data.Tooltip.Visible = true
+        TweenService:Create(data.Tooltip, FastEase, {BackgroundTransparency = 0}):Play()
+        TweenService:Create(data.TooltipLabel, FastEase, {TextTransparency = 0}):Play()
+    else
+        TweenService:Create(data.Tooltip, FastEase, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(data.TooltipLabel, FastEase, {TextTransparency = 1}):Play()
+        task.delay(0.13, function()
+            if data.Tooltip.BackgroundTransparency >= 1 then
+                data.Tooltip.Visible = false
+            end
+        end)
+    end
+end
+
+local function ActivateTab(data)
+    if ActiveTab == data then return end
+    if ActiveTab then
+        TweenService:Create(ActiveTab.Button, Ease, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(ActiveTab.Stroke, Ease, {Transparency = 1}):Play()
+        TweenService:Create(ActiveTab.Glyph, Ease, {TextColor3 = Theme.Idle}):Play()
+    end
+    ActiveTab = data
+    TweenService:Create(data.Button, Ease, {BackgroundTransparency = 0.85}):Play()
+    TweenService:Create(data.Stroke, Ease, {Transparency = 0}):Play()
+    TweenService:Create(data.Glyph, Ease, {TextColor3 = Theme.Accent}):Play()
+    Title.Text = data.Name
+
+    local isHome = (data == HomeTab)
+    CanvasTitle.Visible = not isHome
+    if not isHome then
+        CanvasTitle.Text = data.Name
+    end
+
+    for tabData, frame in pairs(ContentFrames) do
+        frame.Visible = (tabData == data)
+    end
+end
+
+local function CreateTab(order, glyph, name)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.fromOffset(42, 42)
+    Button.BackgroundColor3 = Theme.Accent
+    Button.BackgroundTransparency = 1
+    Button.BorderSizePixel = 0
+    Button.AutoButtonColor = false
+    Button.Text = ""
+    Button.LayoutOrder = order
+    Button.Parent = Sidebar
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(1, 0)
+    Corner.Parent = Button
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Thickness = 1.5
+    Stroke.Color = Theme.Accent
+    Stroke.Transparency = 1
+    Stroke.Parent = Button
+
+    local Glyph = Instance.new("TextLabel")
+    Glyph.BackgroundTransparency = 1
+    Glyph.Size = UDim2.fromScale(1, 1)
+    Glyph.Font = Enum.Font.GothamBold
+    Glyph.TextSize = 18
+    Glyph.TextColor3 = Theme.Idle
+    Glyph.Text = glyph
+    Glyph.Parent = Button
+
+    local Tooltip = Instance.new("Frame")
+    Tooltip.BackgroundColor3 = Theme.Tooltip
+    Tooltip.BackgroundTransparency = 1
+    Tooltip.BorderSizePixel = 0
+    Tooltip.Position = UDim2.new(1, 12, 0.5, 0)
+    Tooltip.AnchorPoint = Vector2.new(0, 0.5)
+    Tooltip.Size = UDim2.fromOffset(0, 28)
+    Tooltip.AutomaticSize = Enum.AutomaticSize.X
+    Tooltip.Visible = false
+    Tooltip.ZIndex = 5
+    Tooltip.Parent = Button
+
+    local TooltipCorner = Instance.new("UICorner")
+    TooltipCorner.CornerRadius = UDim.new(0, 6)
+    TooltipCorner.Parent = Tooltip
+
+    local TooltipPad = Instance.new("UIPadding")
+    TooltipPad.PaddingLeft = UDim.new(0, 10)
+    TooltipPad.PaddingRight = UDim.new(0, 10)
+    TooltipPad.Parent = Tooltip
+
+    local TooltipLabel = Instance.new("TextLabel")
+    TooltipLabel.BackgroundTransparency = 1
+    TooltipLabel.TextTransparency = 1
+    TooltipLabel.Size = UDim2.new(0, 0, 1, 0)
+    TooltipLabel.AutomaticSize = Enum.AutomaticSize.X
+    TooltipLabel.Font = Enum.Font.GothamMedium
+    TooltipLabel.TextSize = 13
+    TooltipLabel.TextColor3 = Theme.TooltipText
+    TooltipLabel.Text = name
+    TooltipLabel.Parent = Tooltip
+
+    local Data = {
+        Button = Button,
+        Stroke = Stroke,
+        Glyph = Glyph,
+        Tooltip = Tooltip,
+        TooltipLabel = TooltipLabel,
+        Name = name
+    }
+
+    Button.MouseEnter:Connect(function()
+        SetTooltip(Data, true)
+        if ActiveTab ~= Data then
+            TweenService:Create(Glyph, FastEase, {TextColor3 = Theme.Hover}):Play()
+        end
+    end)
+
+    Button.MouseLeave:Connect(function()
+        SetTooltip(Data, false)
+        if ActiveTab ~= Data then
+            TweenService:Create(Glyph, FastEase, {TextColor3 = Theme.Idle}):Play()
+        end
+    end)
+
+    Button.MouseButton1Click:Connect(function()
+        ActivateTab(Data)
+    end)
+
+    return Data
+end
+
+HomeTab = CreateTab(1, "⌂", "Home")
+MainTab = CreateTab(2, "≡", "Main")
+MiscTab = CreateTab(3, "⊕", "Misc")
+MenuTab = CreateTab(4, "⚙", "Menu")
+
+ContentFrames[HomeTab] = HomeContent
+ContentFrames[MainTab] = MainContent
+ContentFrames[MiscTab] = MiscContent
+ContentFrames[MenuTab] = MenuContent
+
+local Spacer = Instance.new("Frame")
+Spacer.BackgroundTransparency = 1
+Spacer.Size = UDim2.new(1, 0, 0, 0)
+Spacer.LayoutOrder = 5
+Spacer.Parent = Sidebar
+
+local SpacerFlex = Instance.new("UIFlexItem")
+SpacerFlex.FlexMode = Enum.UIFlexMode.Grow
+SpacerFlex.Parent = Spacer
+
+local Avatar = Instance.new("ImageLabel")
+Avatar.Size = UDim2.fromOffset(38, 38)
+Avatar.LayoutOrder = 6
+Avatar.BackgroundColor3 = Theme.Sidebar
+Avatar.Image = AvatarContent
+Avatar.Parent = Sidebar
+
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(1, 0)
+AvatarCorner.Parent = Avatar
+
+local AvatarStroke = Instance.new("UIStroke")
+AvatarStroke.Thickness = 1.5
+AvatarStroke.Color = Color3.fromRGB(45, 45, 55)
+AvatarStroke.Parent = Avatar
+
+local MinimizedBox = Instance.new("TextButton")
+MinimizedBox.Size = UDim2.fromOffset(0, 0)
+MinimizedBox.AnchorPoint = Vector2.new(0.5, 0.5)
+MinimizedBox.Position = UDim2.fromScale(0.5, 0.5)
+MinimizedBox.BackgroundColor3 = Theme.Sidebar
+MinimizedBox.AutoButtonColor = false
+MinimizedBox.Active = true
+MinimizedBox.Text = ""
+MinimizedBox.Visible = false
+MinimizedBox.ZIndex = 10
+MinimizedBox.Parent = ScreenGui
+
+local MinimizedCorner = Instance.new("UICorner")
+MinimizedCorner.CornerRadius = UDim.new(0, 12)
+MinimizedCorner.Parent = MinimizedBox
+
+local MinimizedStroke = Instance.new("UIStroke")
+MinimizedStroke.Thickness = 1.5
+MinimizedStroke.Color = Theme.Accent
+MinimizedStroke.Transparency = 0.3
+MinimizedStroke.Parent = MinimizedBox
+
+local MinimizedGlyph = Instance.new("TextLabel")
+MinimizedGlyph.BackgroundTransparency = 1
+MinimizedGlyph.Size = UDim2.fromScale(1, 1)
+MinimizedGlyph.Font = Enum.Font.GothamBold
+MinimizedGlyph.TextSize = 18
+MinimizedGlyph.TextColor3 = Theme.Accent
+MinimizedGlyph.Text = "V"
+MinimizedGlyph.Parent = MinimizedBox
+
+local function Minimize()
+    local abs = Main.AbsolutePosition
+    local size = Main.AbsoluteSize
+    MinimizedBox.Position = UDim2.fromOffset(abs.X + size.X / 2, abs.Y + size.Y / 2)
+    MinimizedBox.Visible = true
+    MinimizedBox.Size = UDim2.fromOffset(0, 0)
+    TweenService:Create(MinimizedBox, Ease, {Size = UDim2.fromOffset(46, 46)}):Play()
+    TweenService:Create(Main, Ease, {Size = UDim2.fromOffset(0, 0)}):Play()
+    task.delay(0.18, function()
+        Main.Visible = false
+    end)
+end
+
+local function Restore()
+    Main.Visible = true
+    Main.Size = UDim2.fromOffset(0, 0)
+    TweenService:Create(Main, Ease, {Size = UDim2.fromOffset(560, 380)}):Play()
+    TweenService:Create(MinimizedBox, Ease, {Size = UDim2.fromOffset(0, 0)}):Play()
+    task.delay(0.18, function()
+        MinimizedBox.Visible = false
+    end)
+end
+
+MinimizeButton.MouseButton1Click:Connect(Minimize)
+
+local function MakeDraggable(dragHandle, target, onClick)
+    local dragging = false
+    local dragInput, mousePos, framePos
+    local moved = false
+
+    local function updatePosition(input)
+        local delta = input.Position - mousePos
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            moved = true
+        end
+        target.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+    end
+
+    local function onInputBegan(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+        dragging = true
+        moved = false
+        mousePos = input.Position
+        framePos = target.Position
+
+        local endConn
+        endConn = input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                endConn:Disconnect()
+                if onClick and not moved then
+                    onClick()
+                end
+            end
+        end)
+        Track(endConn)
+    end
+
+    local function onInputChanged(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end
+
+    Track(dragHandle.InputBegan:Connect(onInputBegan))
+    Track(dragHandle.InputChanged:Connect(onInputChanged))
+    Track(UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            updatePosition(input)
+        end
+    end))
+end
+
+MakeDraggable(Topbar, Main)
+MakeDraggable(MinimizedBox, MinimizedBox, Restore)
+
+local KeyRoot = Instance.new("Frame")
+KeyRoot.Size = UDim2.fromScale(1, 1)
+KeyRoot.BackgroundTransparency = 1
+KeyRoot.ZIndex = 20
+KeyRoot.Parent = ScreenGui
+
+local KeyDim = Instance.new("Frame")
+KeyDim.Size = UDim2.fromScale(1, 1)
+KeyDim.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+KeyDim.BackgroundTransparency = 0.5
+KeyDim.BorderSizePixel = 0
+KeyDim.ZIndex = 20
+KeyDim.Parent = KeyRoot
+
+local KeyCard = Instance.new("Frame")
+KeyCard.Size = UDim2.fromOffset(340, 300)
+KeyCard.AnchorPoint = Vector2.new(0.5, 0.5)
+KeyCard.Position = UDim2.fromScale(0.5, 0.5)
+KeyCard.BackgroundColor3 = Theme.Background
+KeyCard.BorderSizePixel = 0
+KeyCard.ZIndex = 21
+KeyCard.Parent = KeyRoot
+
+local KeyCardCorner = Instance.new("UICorner")
+KeyCardCorner.CornerRadius = UDim.new(0, 14)
+KeyCardCorner.Parent = KeyCard
+
+local KeyCardStroke = Instance.new("UIStroke")
+KeyCardStroke.Thickness = 1
+KeyCardStroke.Color = Theme.Divider
+KeyCardStroke.Parent = KeyCard
+
+local KeyCloseButton = Instance.new("TextButton")
+KeyCloseButton.Size = UDim2.fromOffset(26, 26)
+KeyCloseButton.AnchorPoint = Vector2.new(1, 0)
+KeyCloseButton.Position = UDim2.new(1, -14, 0, 14)
+KeyCloseButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+KeyCloseButton.BackgroundTransparency = 1
+KeyCloseButton.BorderSizePixel = 0
+KeyCloseButton.AutoButtonColor = false
+KeyCloseButton.Text = ""
+KeyCloseButton.ZIndex = 22
+KeyCloseButton.Parent = KeyCard
+
+local KeyCloseCorner = Instance.new("UICorner")
+KeyCloseCorner.CornerRadius = UDim.new(1, 0)
+KeyCloseCorner.Parent = KeyCloseButton
+
+local KeyCloseBar1 = Instance.new("Frame")
+KeyCloseBar1.Size = UDim2.fromOffset(12, 2)
+KeyCloseBar1.AnchorPoint = Vector2.new(0.5, 0.5)
+KeyCloseBar1.Position = UDim2.fromScale(0.5, 0.5)
+KeyCloseBar1.BackgroundColor3 = Theme.Idle
+KeyCloseBar1.Rotation = 45
+KeyCloseBar1.BorderSizePixel = 0
+KeyCloseBar1.ZIndex = 23
+KeyCloseBar1.Parent = KeyCloseButton
+
+local KeyCloseBar1Corner = Instance.new("UICorner")
+KeyCloseBar1Corner.CornerRadius = UDim.new(1, 0)
+KeyCloseBar1Corner.Parent = KeyCloseBar1
+
+local KeyCloseBar2 = KeyCloseBar1:Clone()
+KeyCloseBar2.Rotation = -45
+KeyCloseBar2.Parent = KeyCloseButton
+
+KeyCloseButton.MouseEnter:Connect(function()
+    TweenService:Create(KeyCloseButton, FastEase, {BackgroundTransparency = 0.9}):Play()
+    TweenService:Create(KeyCloseBar1, FastEase, {BackgroundColor3 = Theme.Bad}):Play()
+    TweenService:Create(KeyCloseBar2, FastEase, {BackgroundColor3 = Theme.Bad}):Play()
+end)
+
+KeyCloseButton.MouseLeave:Connect(function()
+    TweenService:Create(KeyCloseButton, FastEase, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(KeyCloseBar1, FastEase, {BackgroundColor3 = Theme.Idle}):Play()
+    TweenService:Create(KeyCloseBar2, FastEase, {BackgroundColor3 = Theme.Idle}):Play()
+end)
+
+local KeyBadge = Instance.new("Frame")
+KeyBadge.Size = UDim2.fromOffset(48, 48)
+KeyBadge.AnchorPoint = Vector2.new(0.5, 0)
+KeyBadge.Position = UDim2.new(0.5, 0, 0, 26)
+KeyBadge.BackgroundColor3 = Theme.Accent
+KeyBadge.BackgroundTransparency = 0.85
+KeyBadge.BorderSizePixel = 0
+KeyBadge.ZIndex = 21
+KeyBadge.Parent = KeyCard
+
+local KeyBadgeCorner = Instance.new("UICorner")
+KeyBadgeCorner.CornerRadius = UDim.new(1, 0)
+KeyBadgeCorner.Parent = KeyBadge
+
+local KeyBadgeStroke = Instance.new("UIStroke")
+KeyBadgeStroke.Thickness = 1.5
+KeyBadgeStroke.Color = Theme.Accent
+KeyBadgeStroke.Transparency = 0.3
+KeyBadgeStroke.Parent = KeyBadge
+
+local KeyBadgeLabel = Instance.new("TextLabel")
+KeyBadgeLabel.BackgroundTransparency = 1
+KeyBadgeLabel.Size = UDim2.fromScale(1, 1)
+KeyBadgeLabel.Font = Enum.Font.GothamBold
+KeyBadgeLabel.TextSize = 20
+KeyBadgeLabel.TextColor3 = Theme.Accent
+KeyBadgeLabel.Text = "S"
+KeyBadgeLabel.ZIndex = 22
+KeyBadgeLabel.Parent = KeyBadge
+
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.AnchorPoint = Vector2.new(0.5, 0)
+KeyTitle.Position = UDim2.new(0.5, 0, 0, 84)
+KeyTitle.Size = UDim2.new(1, -40, 0, 22)
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.TextSize = 16
+KeyTitle.TextColor3 = Theme.TextPrimary
+KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
+KeyTitle.Text = "Slix Keysystem"
+KeyTitle.ZIndex = 21
+KeyTitle.Parent = KeyCard
+
+local KeySubtitle = Instance.new("TextLabel")
+KeySubtitle.BackgroundTransparency = 1
+KeySubtitle.AnchorPoint = Vector2.new(0.5, 0)
+KeySubtitle.Position = UDim2.new(0.5, 0, 0, 106)
+KeySubtitle.Size = UDim2.new(1, -40, 0, 18)
+KeySubtitle.Font = Enum.Font.Gotham
+KeySubtitle.TextSize = 12
+KeySubtitle.TextColor3 = Theme.TextSecondary
+KeySubtitle.TextXAlignment = Enum.TextXAlignment.Center
+KeySubtitle.Text = "Enter your key to unlock the hub"
+KeySubtitle.ZIndex = 21
+KeySubtitle.Parent = KeyCard
+
+local KeyInput = Instance.new("TextBox")
+KeyInput.AnchorPoint = Vector2.new(0.5, 0)
+KeyInput.Position = UDim2.new(0.5, 0, 0, 136)
+KeyInput.Size = UDim2.new(1, -48, 0, 38)
+KeyInput.BackgroundColor3 = Theme.Card
+KeyInput.BorderSizePixel = 0
+KeyInput.ClearTextOnFocus = false
+KeyInput.PlaceholderText = "Enter key..."
+KeyInput.PlaceholderColor3 = Theme.TextSecondary
+KeyInput.TextColor3 = Theme.TextPrimary
+KeyInput.Font = Enum.Font.Gotham
+KeyInput.TextSize = 13
+KeyInput.Text = ""
+KeyInput.ZIndex = 21
+KeyInput.Parent = KeyCard
+
+local KeyInputCorner = Instance.new("UICorner")
+KeyInputCorner.CornerRadius = UDim.new(0, 8)
+KeyInputCorner.Parent = KeyInput
+
+local KeyInputStroke = Instance.new("UIStroke")
+KeyInputStroke.Thickness = 1
+KeyInputStroke.Color = Theme.Divider
+KeyInputStroke.Parent = KeyInput
+
+local KeyInputPad = Instance.new("UIPadding")
+KeyInputPad.PaddingLeft = UDim.new(0, 12)
+KeyInputPad.PaddingRight = UDim.new(0, 12)
+KeyInputPad.Parent = KeyInput
+
+local KeyButtonsRow = Instance.new("Frame")
+KeyButtonsRow.AnchorPoint = Vector2.new(0.5, 0)
+KeyButtonsRow.Position = UDim2.new(0.5, 0, 0, 186)
+KeyButtonsRow.Size = UDim2.new(1, -48, 0, 40)
+KeyButtonsRow.BackgroundTransparency = 1
+KeyButtonsRow.ZIndex = 21
+KeyButtonsRow.Parent = KeyCard
+
+local KeyButtonsList = Instance.new("UIListLayout")
+KeyButtonsList.FillDirection = Enum.FillDirection.Horizontal
+KeyButtonsList.Padding = UDim.new(0, 10)
+KeyButtonsList.SortOrder = Enum.SortOrder.LayoutOrder
+KeyButtonsList.Parent = KeyButtonsRow
+
+local GetKeyButton = Instance.new("TextButton")
+GetKeyButton.Size = UDim2.new(0.4, -5, 1, 0)
+GetKeyButton.BackgroundColor3 = Theme.Card
+GetKeyButton.BorderSizePixel = 0
+GetKeyButton.AutoButtonColor = false
+GetKeyButton.Text = ""
+GetKeyButton.LayoutOrder = 1
+GetKeyButton.ZIndex = 21
+GetKeyButton.Parent = KeyButtonsRow
+
+local GetKeyCorner = Instance.new("UICorner")
+GetKeyCorner.CornerRadius = UDim.new(0, 8)
+GetKeyCorner.Parent = GetKeyButton
+
+local GetKeyStroke = Instance.new("UIStroke")
+GetKeyStroke.Thickness = 1
+GetKeyStroke.Color = Theme.Divider
+GetKeyStroke.Parent = GetKeyButton
+
+local GetKeyLabel = Instance.new("TextLabel")
+GetKeyLabel.BackgroundTransparency = 1
+GetKeyLabel.Size = UDim2.fromScale(1, 1)
+GetKeyLabel.Font = Enum.Font.GothamBold
+GetKeyLabel.TextSize = 13
+GetKeyLabel.TextColor3 = Theme.TextPrimary
+GetKeyLabel.Text = "Get Key"
+GetKeyLabel.ZIndex = 22
+GetKeyLabel.Parent = GetKeyButton
+
+GetKeyButton.MouseEnter:Connect(function()
+    TweenService:Create(GetKeyButton, FastEase, {BackgroundColor3 = Theme.Sidebar}):Play()
+end)
+
+GetKeyButton.MouseLeave:Connect(function()
+    TweenService:Create(GetKeyButton, FastEase, {BackgroundColor3 = Theme.Card}):Play()
+end)
+
+local SubmitButton = Instance.new("TextButton")
+SubmitButton.Size = UDim2.new(0.6, -5, 1, 0)
+SubmitButton.BackgroundColor3 = Theme.Accent
+SubmitButton.BorderSizePixel = 0
+SubmitButton.AutoButtonColor = false
+SubmitButton.Text = ""
+SubmitButton.LayoutOrder = 2
+SubmitButton.ZIndex = 21
+SubmitButton.Parent = KeyButtonsRow
+
+local SubmitCorner = Instance.new("UICorner")
+SubmitCorner.CornerRadius = UDim.new(0, 8)
+SubmitCorner.Parent = SubmitButton
+
+local SubmitContent = Instance.new("Frame")
+SubmitContent.BackgroundTransparency = 1
+SubmitContent.Size = UDim2.fromScale(1, 1)
+SubmitContent.ZIndex = 22
+SubmitContent.Parent = SubmitButton
+
+local SubmitContentList = Instance.new("UIListLayout")
+SubmitContentList.FillDirection = Enum.FillDirection.Horizontal
+SubmitContentList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SubmitContentList.VerticalAlignment = Enum.VerticalAlignment.Center
+SubmitContentList.Padding = UDim.new(0, 8)
+SubmitContentList.SortOrder = Enum.SortOrder.LayoutOrder
+SubmitContentList.Parent = SubmitContent
+
+local SpinnerPivot = Instance.new("Frame")
+SpinnerPivot.Size = UDim2.fromOffset(14, 14)
+SpinnerPivot.BackgroundTransparency = 1
+SpinnerPivot.Visible = false
+SpinnerPivot.LayoutOrder = 1
+SpinnerPivot.ZIndex = 23
+SpinnerPivot.Parent = SubmitContent
+
+local SpinnerRing = Instance.new("UIStroke")
+SpinnerRing.Thickness = 1.5
+SpinnerRing.Color = Color3.fromRGB(255, 255, 255)
+SpinnerRing.Transparency = 0.75
+SpinnerRing.Parent = SpinnerPivot
+
+local SpinnerRingCorner = Instance.new("UICorner")
+SpinnerRingCorner.CornerRadius = UDim.new(1, 0)
+SpinnerRingCorner.Parent = SpinnerPivot
+
+local SpinnerDot = Instance.new("Frame")
+SpinnerDot.Size = UDim2.fromOffset(4, 4)
+SpinnerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+SpinnerDot.Position = UDim2.new(0.5, 0, 0, 1)
+SpinnerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SpinnerDot.BorderSizePixel = 0
+SpinnerDot.ZIndex = 24
+SpinnerDot.Parent = SpinnerPivot
+
+local SpinnerDotCorner = Instance.new("UICorner")
+SpinnerDotCorner.CornerRadius = UDim.new(1, 0)
+SpinnerDotCorner.Parent = SpinnerDot
+
+local SpinTween = TweenService:Create(SpinnerPivot, TweenInfo.new(0.85, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false), {Rotation = 360})
+
+local SubmitLabel = Instance.new("TextLabel")
+SubmitLabel.BackgroundTransparency = 1
+SubmitLabel.AutomaticSize = Enum.AutomaticSize.X
+SubmitLabel.Size = UDim2.new(0, 0, 1, 0)
+SubmitLabel.Font = Enum.Font.GothamBold
+SubmitLabel.TextSize = 13
+SubmitLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitLabel.Text = "Submit Key"
+SubmitLabel.LayoutOrder = 2
+SubmitLabel.ZIndex = 23
+SubmitLabel.Parent = SubmitContent
+
+SubmitButton.MouseEnter:Connect(function()
+    TweenService:Create(SubmitButton, FastEase, {BackgroundColor3 = Color3.fromRGB(104, 116, 247)}):Play()
+end)
+
+SubmitButton.MouseLeave:Connect(function()
+    TweenService:Create(SubmitButton, FastEase, {BackgroundColor3 = Theme.Accent}):Play()
+end)
+
+local KeyStatus = Instance.new("TextLabel")
+KeyStatus.BackgroundTransparency = 1
+KeyStatus.AnchorPoint = Vector2.new(0.5, 0)
+KeyStatus.Position = UDim2.new(0.5, 0, 0, 232)
+KeyStatus.Size = UDim2.new(1, -32, 0, 30)
+KeyStatus.Font = Enum.Font.Gotham
+KeyStatus.TextSize = 12
+KeyStatus.TextWrapped = true
+KeyStatus.TextColor3 = Theme.TextSecondary
+KeyStatus.Text = ""
+KeyStatus.ZIndex = 21
+KeyStatus.Parent = KeyCard
+
+local function SetKeyStatus(text, color)
+    KeyStatus.Text = text
+    KeyStatus.TextColor3 = color or Theme.TextSecondary
+end
+
+GetKeyButton.MouseButton1Click:Connect(function()
+    if DiscordInvite == "" then
+        SetKeyStatus("No invite link set yet", Theme.TextSecondary)
+    elseif setclipboard then
+        pcall(setclipboard, DiscordInvite)
+        SetKeyStatus("Invite link copied to clipboard", Theme.Good)
+    else
+        SetKeyStatus("Clipboard not supported here", Theme.Bad)
+    end
+end)
+
+local Verifying = false
+
+local function AcceptKey()
+    local CoverIn = TweenService:Create(TransitionCover, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+    CoverIn:Play()
+    CoverIn.Completed:Wait()
+    KeyRoot.Visible = false
+    Main.Visible = true
+    TweenService:Create(TransitionCover, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+end
+
+local function SubmitKey()
+    if Verifying then return end
+    local keyText = KeyInput.Text
+    if keyText == "" then
+        SetKeyStatus("Please enter a key", Theme.Bad)
+        return
+    end
+    Verifying = true
+    SubmitLabel.Text = "Verifying key..."
+    SpinnerPivot.Rotation = 0
+    SpinnerPivot.Visible = true
+    SpinTween:Play()
+    SetKeyStatus("")
+    task.delay(1.4, function()
+        SpinTween:Cancel()
+        SpinnerPivot.Visible = false
+        Verifying = false
+        if RequiredKey == "" or keyText == RequiredKey then
+            SubmitLabel.Text = "Key Accepted"
+            SetKeyStatus("Access granted", Theme.Good)
+            task.delay(0.5, AcceptKey)
+        else
+            SubmitLabel.Text = "Submit Key"
+            SetKeyStatus("Invalid key, try again", Theme.Bad)
+        end
+    end)
+end
+
+SubmitButton.MouseButton1Click:Connect(SubmitKey)
+KeyInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        SubmitKey()
+    end
+end)
+
+CloseButton.MouseButton1Click:Connect(CloseHub)
+KeyCloseButton.MouseButton1Click:Connect(CloseHub)
+
+ActivateTab(HomeTab)
